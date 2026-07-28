@@ -37,3 +37,21 @@ describe("openai request codec", () => {
     expect(back.stop).toEqual(["\n\n"]);
   });
 });
+
+const RESPONSE = {
+  id: "chatcmpl-1",
+  model: "gpt-4o",
+  choices: [{ index: 0, finish_reason: "tool_calls", message: { role: "assistant", content: "sure", tool_calls: [{ id: "call_9", type: "function", function: { name: "add", arguments: "{\"a\":1,\"b\":2}" } }] } }],
+  usage: { prompt_tokens: 11, completion_tokens: 7 },
+};
+
+describe("openai response codec", () => {
+  it("decodes to IR and re-encodes losslessly (parsed-equal)", async () => {
+    const ir = await openaiTranslator.decodeResponse(JSON.stringify(RESPONSE));
+    expect(ir.model).toBe("gpt-4o");
+    const back = JSON.parse(await openaiTranslator.encodeResponse(ir));
+    expect(back.choices[0].finish_reason).toBe("tool_calls");
+    expect(back.choices[0].message.tool_calls[0].function.name).toBe("add");
+    expect(back.usage).toMatchObject({ prompt_tokens: 11, completion_tokens: 7 });
+  });
+});

@@ -26,12 +26,12 @@ public final class OpenaiTranslator implements Translator {
 
     @Override
     public IrResponse decodeResponse(String wireJson) {
-        throw new UnsupportedOperationException("openai decodeResponse not implemented yet");
+        return OpenaiResponseCodec.decodeResponse(json, wireJson);
     }
 
     @Override
     public String encodeResponse(IrResponse response) {
-        throw new UnsupportedOperationException("openai encodeResponse not implemented yet");
+        return OpenaiResponseCodec.encodeResponse(json, response);
     }
 
     @Override

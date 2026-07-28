@@ -3,7 +3,9 @@ package io.github.intisy.ai.translator.openai;
 import io.github.intisy.ai.ir.Block;
 import io.github.intisy.ai.ir.ImageBlock;
 import io.github.intisy.ai.ir.TextBlock;
+import io.github.intisy.ai.ir.ToolUseBlock;
 import io.github.intisy.ai.ir.UnknownBlock;
+import io.github.intisy.ai.ir.spi.JsonCodec;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -17,7 +19,9 @@ import java.util.Map;
  * the whole request. An {@code image_url.url} is either a {@code data:<mediaType>;base64,<data>}
  * URI (inline image bytes) or a plain remote URL; extra {@code image_url} fields (e.g.
  * {@code detail}) round-trip verbatim through {@link #EXT_IMAGE_URL_RAW} since they have no
- * neutral IR home.
+ * neutral IR home. Also carries the {@code tool_calls} <-> {@link ToolUseBlock} mapping shared by
+ * {@code OpenaiRequestCodec} and {@code OpenaiResponseCodec} (an assistant-message-level field on
+ * both, not a content part).
  */
 final class OpenaiBlockCodec {
     private OpenaiBlockCodec() {
@@ -132,6 +136,35 @@ final class OpenaiBlockCodec {
         m.put("type", "image_url");
         m.put("image_url", imageUrl);
         return m;
+    }
+
+    // ---- tool_calls (assistant-message level, shared by request and response codecs) -----------
+
+    static ToolUseBlock decodeToolCall(JsonCodec json, Map<String, Object> tcMap) {
+        ToolUseBlock t = new ToolUseBlock();
+        t.id = OpenaiJsonUtil.asString(tcMap.get("id"));
+        Map<String, Object> fn = OpenaiJsonUtil.asMap(tcMap.get("function"));
+        if (fn != null) {
+            t.name = OpenaiJsonUtil.asString(fn.get("name"));
+            String args = OpenaiJsonUtil.asString(fn.get("arguments"));
+            t.input = args != null ? json.parse(args) : null;
+        }
+        return t;
+    }
+
+    static List<Object> encodeToolCalls(JsonCodec json, List<ToolUseBlock> toolUses) {
+        List<Object> out = new ArrayList<>();
+        for (ToolUseBlock t : toolUses) {
+            Map<String, Object> fn = new LinkedHashMap<>();
+            fn.put("name", t.name);
+            fn.put("arguments", json.stringify(t.input));
+            Map<String, Object> tc = new LinkedHashMap<>();
+            tc.put("id", t.id);
+            tc.put("type", "function");
+            tc.put("function", fn);
+            out.add(tc);
+        }
+        return out;
     }
 
     /** A parsed {@code data:<mediaType>;base64,<data>} URI, or null if {@code url} is not one. */

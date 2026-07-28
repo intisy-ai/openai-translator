@@ -142,7 +142,7 @@ final class OpenaiRequestCodec {
         if (toolCalls != null) {
             for (Object tc : toolCalls) {
                 Map<String, Object> tcMap = OpenaiJsonUtil.asMap(tc);
-                if (tcMap != null) content.add(decodeToolCall(json, tcMap));
+                if (tcMap != null) content.add(OpenaiBlockCodec.decodeToolCall(json, tcMap));
             }
         }
 
@@ -220,7 +220,7 @@ final class OpenaiRequestCodec {
             m.put("content", OpenaiBlockCodec.encodeContentList(textish));
         }
         if (!toolUses.isEmpty()) {
-            m.put("tool_calls", encodeToolCalls(json, toolUses));
+            m.put("tool_calls", OpenaiBlockCodec.encodeToolCalls(json, toolUses));
         }
         copyLeftoverMessageExtensions(msg, m);
         return m;
@@ -255,35 +255,6 @@ final class OpenaiRequestCodec {
         List<Block> blocks;
         boolean wasString;
         boolean wasNull;
-    }
-
-    // ---- tool_calls ----------------------------------------------------------------------------
-
-    private static ToolUseBlock decodeToolCall(JsonCodec json, Map<String, Object> tcMap) {
-        ToolUseBlock t = new ToolUseBlock();
-        t.id = OpenaiJsonUtil.asString(tcMap.get("id"));
-        Map<String, Object> fn = OpenaiJsonUtil.asMap(tcMap.get("function"));
-        if (fn != null) {
-            t.name = OpenaiJsonUtil.asString(fn.get("name"));
-            String args = OpenaiJsonUtil.asString(fn.get("arguments"));
-            t.input = args != null ? json.parse(args) : null;
-        }
-        return t;
-    }
-
-    private static List<Object> encodeToolCalls(JsonCodec json, List<ToolUseBlock> toolUses) {
-        List<Object> out = new ArrayList<>();
-        for (ToolUseBlock t : toolUses) {
-            Map<String, Object> fn = new LinkedHashMap<>();
-            fn.put("name", t.name);
-            fn.put("arguments", json.stringify(t.input));
-            Map<String, Object> tc = new LinkedHashMap<>();
-            tc.put("id", t.id);
-            tc.put("type", "function");
-            tc.put("function", fn);
-            out.add(tc);
-        }
-        return out;
     }
 
     // ---- tools -----------------------------------------------------------------------------------
