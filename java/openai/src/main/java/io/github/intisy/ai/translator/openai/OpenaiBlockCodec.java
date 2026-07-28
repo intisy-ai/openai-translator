@@ -34,7 +34,10 @@ final class OpenaiBlockCodec {
     static List<Object> encodeContentList(List<Block> blocks) {
         List<Object> out = new ArrayList<>();
         if (blocks == null) return out;
-        for (Block b : blocks) out.add(encodeContentPart(b));
+        for (Block b : blocks) {
+            Map<String, Object> part = encodeContentPart(b);
+            if (part != null) out.add(part);
+        }
         return out;
     }
 

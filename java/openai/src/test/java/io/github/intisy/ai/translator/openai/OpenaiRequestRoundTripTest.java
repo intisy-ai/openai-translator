@@ -1,6 +1,7 @@
 package io.github.intisy.ai.translator.openai;
 
 import io.github.intisy.ai.ir.Block;
+import io.github.intisy.ai.ir.IrMessage;
 import io.github.intisy.ai.ir.IrRequest;
 import io.github.intisy.ai.ir.IrToolChoice;
 import io.github.intisy.ai.ir.TextBlock;
@@ -11,10 +12,13 @@ import io.github.intisy.ai.ir.json.TestJsonCodec;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -193,5 +197,36 @@ class OpenaiRequestRoundTripTest {
 
         String reEncoded = translator.encodeRequest(decoded);
         assertEquals(json.parse(wire), json.parse(reEncoded));
+    }
+
+    @Test
+    void offSpecContentBlockIsOmittedNotEncodedAsNull() {
+        JsonCodec json = new TestJsonCodec();
+        OpenaiTranslator translator = new OpenaiTranslator(json);
+
+        // A ToolResultBlock has no OpenAI content-part shape and is only expected on a "tool"
+        // role message; here it turns up as a stray block on a "user" message content list,
+        // exactly the off-spec shape a cross-provider IR (built by another translator) can produce.
+        ToolResultBlock strayToolResult = new ToolResultBlock();
+        strayToolResult.toolUseId = "call_1";
+        strayToolResult.content = Collections.<Block>singletonList(new TextBlock("5"));
+
+        IrMessage userMessage = new IrMessage();
+        userMessage.role = "user";
+        userMessage.content = Arrays.asList((Block) new TextBlock("hi"), strayToolResult);
+
+        IrRequest request = new IrRequest();
+        request.model = "gpt-4o";
+        request.stream = false;
+        request.messages = Collections.singletonList(userMessage);
+
+        String reEncoded = translator.encodeRequest(request);
+        Map<String, Object> root = OpenaiJsonUtil.asMap(json.parse(reEncoded));
+        List<Object> messages = OpenaiJsonUtil.asList(root.get("messages"));
+        Map<String, Object> encodedUserMessage = OpenaiJsonUtil.asMap(messages.get(0));
+        List<Object> content = OpenaiJsonUtil.asList(encodedUserMessage.get("content"));
+
+        assertEquals(1, content.size(), "the off-spec ToolResultBlock must be omitted, not encoded as null");
+        assertFalse(content.contains(null), "content array must never contain a literal null entry");
     }
 }
