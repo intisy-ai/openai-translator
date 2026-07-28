@@ -147,4 +147,42 @@ class OpenaiStreamRoundTripTest {
         assertEquals(json.parse("{\"a\":2,\"b\":3}"), json.parse(args.toString()));
         assertEquals(IrStopReason.TOOL_USE, stopReason);
     }
+
+    /**
+     * OpenAI's {@code stream_options: {include_usage: true}} mode sends the {@code finish_reason}
+     * chunk with {@code usage: null}, then a separate trailing chunk with {@code choices: []} and
+     * the real {@code usage} object. That trailing frame has no {@code choices[0]}, so usage must
+     * be captured from it directly rather than read off the finish_reason frame; the message_delta
+     * must be deferred to stream end so it can carry that usage.
+     */
+    @Test
+    void trailingChoicesEmptyFrameCarriesUsageAfterFinishReason() {
+        JsonCodec json = new TestJsonCodec();
+        OpenaiTranslator translator = new OpenaiTranslator(json);
+        StreamDecoder decoder = translator.newStreamDecoder();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(frame("{\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}"));
+        sb.append(frame("{\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":null}"));
+        sb.append(frame("{\"choices\":[],\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":7}}"));
+        sb.append(frame("[DONE]"));
+
+        List<IrStreamEvent> events = decoder.decode(sb.toString());
+
+        MessageDeltaEvent messageDelta = null;
+        int messageDeltaCount = 0;
+        for (IrStreamEvent event : events) {
+            if (event instanceof MessageDeltaEvent) {
+                messageDelta = (MessageDeltaEvent) event;
+                messageDeltaCount++;
+            }
+        }
+        assertTrue(messageDelta != null, "expected a message_delta event carrying the trailing usage");
+        assertEquals(IrStopReason.END_TURN, messageDelta.stopReason);
+        assertEquals(11, messageDelta.usage.inputTokens);
+        assertEquals(7, messageDelta.usage.outputTokens);
+
+        assertTrue(events.get(events.size() - 1) instanceof MessageStopEvent);
+        assertEquals(1, messageDeltaCount);
+    }
 }

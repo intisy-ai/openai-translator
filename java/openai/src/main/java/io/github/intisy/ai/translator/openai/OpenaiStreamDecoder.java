@@ -1,5 +1,6 @@
 package io.github.intisy.ai.translator.openai;
 
+import io.github.intisy.ai.ir.IrUsage;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 import io.github.intisy.ai.ir.spi.StreamDecoder;
 import io.github.intisy.ai.ir.stream.ContentBlockKind;
@@ -39,6 +40,8 @@ final class OpenaiStreamDecoder implements StreamDecoder {
 
     private boolean messageStarted = false;
     private boolean messageDeltaSent = false;
+    private String pendingStopReason = null;
+    private IrUsage pendingUsage = null;
     private int nextBlockIndex = 0;
     private Integer textBlockIndex = null;
     private final Map<Integer, Integer> toolBlockIndexByToolCallIndex = new LinkedHashMap<>();
@@ -104,12 +107,14 @@ final class OpenaiStreamDecoder implements StreamDecoder {
         String finishReason = choice != null ? OpenaiJsonUtil.asString(choice.get("finish_reason")) : null;
         if (finishReason != null) {
             closeOpenBlocks(out);
-            MessageDeltaEvent ev = new MessageDeltaEvent();
-            ev.stopReason = OpenaiFinishReason.toIr(finishReason);
-            ev.usage = OpenaiUsageCodec.decode(frame.get("usage"));
-            out.add(ev);
-            messageDeltaSent = true;
+            pendingStopReason = OpenaiFinishReason.toIr(finishReason);
         }
+
+        // stream_options.include_usage sends the finish_reason chunk with usage: null, then a
+        // separate trailing chunk with choices: [] and the real usage; capture usage from
+        // whichever frame carries it, non-null last write wins.
+        IrUsage usage = OpenaiUsageCodec.decode(frame.get("usage"));
+        if (usage != null) pendingUsage = usage;
     }
 
     private void ensureMessageStart(Map<String, Object> frame, Map<String, Object> delta, List<IrStreamEvent> out) {
@@ -184,11 +189,15 @@ final class OpenaiStreamDecoder implements StreamDecoder {
     }
 
     private void flushDone(List<IrStreamEvent> out) {
-        // A stream that reaches [DONE] without ever seeing a finish_reason (an abrupt/truncated
-        // stream) still needs its blocks closed and a message_delta before message_stop.
+        // message_delta is always emitted here, at stream end, never eagerly on the finish_reason
+        // frame: the trailing usage frame (choices: []) that stream_options.include_usage sends
+        // after finish_reason has no choices[0], so it must still be captured before this point.
         if (!messageDeltaSent) {
             closeOpenBlocks(out);
-            out.add(new MessageDeltaEvent());
+            MessageDeltaEvent ev = new MessageDeltaEvent();
+            ev.stopReason = pendingStopReason;
+            ev.usage = pendingUsage;
+            out.add(ev);
             messageDeltaSent = true;
         }
         out.add(new MessageStopEvent());

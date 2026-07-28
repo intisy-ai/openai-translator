@@ -99,6 +99,26 @@ describe("openai stream codec", () => {
     expect(messageDelta.stopReason).toBe("end_turn");
   });
 
+  it("captures usage from a trailing choices-empty frame after finish_reason (stream_options.include_usage)", async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"content":"hi"}}]}\n\n' +
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"usage":null}\n\n' +
+      'data: {"choices":[],"usage":{"prompt_tokens":11,"completion_tokens":7}}\n\n' +
+      'data: [DONE]\n\n';
+    const ts = await openaiTranslator.decodeStream();
+    const events = collect(ts.readable);
+    const writer = ts.writable.getWriter();
+    await writer.write(sse);
+    await writer.close();
+    const got = (await events) as Array<{ event?: string; stopReason?: string; usage?: { inputTokens?: number; outputTokens?: number } }>;
+
+    const messageDeltas = got.filter((e) => e.event === "message_delta");
+    expect(messageDeltas.length).toBe(1);
+    const messageDelta = messageDeltas[0] as { stopReason?: string; usage?: { inputTokens?: number; outputTokens?: number } };
+    expect(messageDelta.stopReason).toBe("end_turn");
+    expect(messageDelta.usage).toMatchObject({ inputTokens: 11, outputTokens: 7 });
+  });
+
   it("accumulates streamed tool_call argument fragments keyed by index", async () => {
     const sse =
       'data: {"choices":[{"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"add","arguments":"{\\"a\\":"}}]}}]}\n\n' +
