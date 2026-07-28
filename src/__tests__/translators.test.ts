@@ -55,3 +55,66 @@ describe("openai response codec", () => {
     expect(back.usage).toMatchObject({ prompt_tokens: 11, completion_tokens: 7 });
   });
 });
+
+async function collect(stream: ReadableStream<unknown>): Promise<unknown[]> {
+  const out: unknown[] = [];
+  const reader = stream.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    out.push(value);
+  }
+  return out;
+}
+
+describe("openai stream codec", () => {
+  it("decodes OpenAI SSE into IR stream events across a mid-frame chunk split", async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"role":"assistant","content":"Hel"}}]}\n\n' +
+      'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n' +
+      'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":2}}\n\n' +
+      'data: [DONE]\n\n';
+    const ts = await openaiTranslator.decodeStream();
+    const events = collect(ts.readable);
+    const writer = ts.writable.getWriter();
+    // split the first frame mid-way to force cross-chunk buffering
+    await writer.write(sse.slice(0, 40));
+    await writer.write(sse.slice(40));
+    await writer.close();
+    const got = (await events) as Array<{ event?: string; text?: string; stopReason?: string }>;
+
+    const kinds = got.map((e) => e.event);
+    expect(kinds).toEqual([
+      "message_start",
+      "content_block_start",
+      "text_delta",
+      "text_delta",
+      "content_block_stop",
+      "message_delta",
+      "message_stop",
+    ]);
+    const text = got.filter((e) => e.event === "text_delta").map((e) => e.text).join("");
+    expect(text).toBe("Hello");
+    const messageDelta = got.find((e) => e.event === "message_delta") as { stopReason?: string };
+    expect(messageDelta.stopReason).toBe("end_turn");
+  });
+
+  it("accumulates streamed tool_call argument fragments keyed by index", async () => {
+    const sse =
+      'data: {"choices":[{"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"add","arguments":"{\\"a\\":"}}]}}]}\n\n' +
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"1,\\"b\\":2}"}}]}}]}\n\n' +
+      'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}\n\n' +
+      'data: [DONE]\n\n';
+    const ts = await openaiTranslator.decodeStream();
+    const events = collect(ts.readable);
+    const writer = ts.writable.getWriter();
+    await writer.write(sse);
+    await writer.close();
+    const got = (await events) as Array<{ event?: string; partialJson?: string; toolName?: string }>;
+
+    const toolStart = got.find((e) => e.event === "content_block_start" && e.toolName === "add");
+    expect(toolStart).toBeDefined();
+    const argsFragments = got.filter((e) => e.event === "tool_input_delta").map((e) => e.partialJson).join("");
+    expect(JSON.parse(argsFragments)).toEqual({ a: 1, b: 2 });
+  });
+});

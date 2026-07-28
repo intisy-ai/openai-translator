@@ -36,11 +36,11 @@ public final class OpenaiTranslator implements Translator {
 
     @Override
     public StreamDecoder newStreamDecoder() {
-        throw new UnsupportedOperationException("openai newStreamDecoder not implemented yet");
+        return new OpenaiStreamDecoder(json);
     }
 
     @Override
     public StreamEncoder newStreamEncoder() {
-        throw new UnsupportedOperationException("openai newStreamEncoder not implemented yet");
+        return new OpenaiStreamEncoder(json);
     }
 }
