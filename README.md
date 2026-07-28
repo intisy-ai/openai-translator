@@ -1,9 +1,5 @@
 # openai-translator
 
-[![npm version](https://img.shields.io/npm/v/openai-translator.svg)](https://www.npmjs.com/package/openai-translator)
-[![npm downloads](https://img.shields.io/npm/dm/openai-translator.svg)](https://www.npmjs.com/package/openai-translator)
-[![CI](https://github.com/intisy-ai/openai-translator/actions/workflows/publish.yml/badge.svg)](https://github.com/intisy-ai/openai-translator/actions/workflows/publish.yml)
-
 OpenAI Chat Completions vendor translator for the canonical IR (internal representation) used
 across the intisy AI-tooling ecosystem. Java + TeaVM single-source, so the exact same request,
 response, and streaming codecs compile to a JVM jar and to a JS module: any front-door or provider
@@ -70,13 +66,8 @@ git submodule update --init --recursive
 
 `openai-translator` itself nests `core-ir` as a submodule, so a recursive submodule update is
 required (`--init --recursive`, or `git submodule update --init --recursive` from the consuming
-repo's root) to pull both levels before building.
-
-Via npm (once published):
-
-```bash
-npm install openai-translator
-```
+repo's root) to pull both levels before building. It is a submodule-consumed library like
+`core-ir`/`core-proxy`, not an npm package, so there is no `npm install` step.
 
 ## Usage
 
