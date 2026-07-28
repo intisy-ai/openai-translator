@@ -37,25 +37,25 @@ wrapper over that generated JS, so callers never touch the TeaVM handle directly
 
 ## Structure
 
-- `src/index.ts` — `loadOpenaiTranslator()`, a lazily-memoized dynamic import of the TeaVM ESM
+- `src/index.ts` - `loadOpenaiTranslator()`, a lazily-memoized dynamic import of the TeaVM ESM
   bundle, plus the public barrel re-exporting `translators.ts` and `core-ir`'s IR types.
-- `src/translators.ts` — the public, typed TS API: `openaiTranslator`, with
+- `src/translators.ts` - the public, typed TS API: `openaiTranslator`, with
   `decodeRequest`/`encodeRequest`/`decodeResponse`/`encodeResponse` (thin async wrappers over the
   TeaVM exports) and `decodeStream()`/`encodeStream()`, which return a real `TransformStream`
   driven chunk-by-chunk by the stateful Java handle.
-- `src/driver.ts` — a small CLI driver (`node dist/driver.js <payload.json>`) that decodes a wire
+- `src/driver.ts` - a small CLI driver (`node dist/driver.js <payload.json>`) that decodes a wire
   request to IR and re-encodes it, useful for manual smoke checks.
-- `src/generated/openai-translator.teavm.d.ts` — hand-authored ambient types for the staged JS (the
+- `src/generated/openai-translator.teavm.d.ts` - hand-authored ambient types for the staged JS (the
   `.js` itself is gitignored build output).
-- `src/__tests__/` — `smoke.test.ts` (toolchain round trip) and `translators.test.ts` (request,
+- `src/__tests__/` - `smoke.test.ts` (toolchain round trip) and `translators.test.ts` (request,
   response, and streamed-response round trips through the `TransformStream` helpers).
-- `java/openai/` — the OpenAI codecs (`OpenaiRequestCodec`, `OpenaiResponseCodec`,
+- `java/openai/` - the OpenAI codecs (`OpenaiRequestCodec`, `OpenaiResponseCodec`,
   `OpenaiStreamDecoder`, `OpenaiStreamEncoder`, `OpenaiBlockCodec`, `OpenaiUsageCodec`,
   `OpenaiFinishReason`) plus `OpenaiTranslator`, the `Translator` implementation that ties them
   together. Depends on the nested `core-ir`'s `:ir` module for the IR types and the codec SPI.
-- `java/teavm-openai/` — the TeaVM JS export surface (`OpenaiTranslatorJs`), transpiling `:openai`
+- `java/teavm-openai/` - the TeaVM JS export surface (`OpenaiTranslatorJs`), transpiling `:openai`
   and `:ir` to `openai-translator.js`.
-- `java/settings.gradle` / `java/build.gradle` / `java/gradlew*` — self-contained Gradle build
+- `java/settings.gradle` / `java/build.gradle` / `java/gradlew*` - self-contained Gradle build
   (Java 8 for `:openai`, Java 17 override for `:teavm-openai`), re-declaring the nested `:ir`
   module's project path (Gradle settings do not nest across submodules).
 
