@@ -5,6 +5,7 @@ import io.github.intisy.ai.ir.ImageBlock;
 import io.github.intisy.ai.ir.TextBlock;
 import io.github.intisy.ai.ir.ToolUseBlock;
 import io.github.intisy.ai.ir.UnknownBlock;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 
 import java.util.ArrayList;
@@ -46,10 +47,10 @@ final class OpenaiBlockCodec {
     }
 
     static List<Block> decodeContentList(Object raw) {
-        List<Object> list = OpenaiJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return null;
         List<Block> out = new ArrayList<>();
-        for (Object item : list) out.add(decodeContentPart(OpenaiJsonUtil.asMap(item)));
+        for (Object item : list) out.add(decodeContentPart(JsonUtil.asMap(item)));
         return out;
     }
 
@@ -69,12 +70,12 @@ final class OpenaiBlockCodec {
 
     static Block decodeContentPart(Map<String, Object> m) {
         if (m == null) return null;
-        String type = OpenaiJsonUtil.asString(m.get("type"));
+        String type = JsonUtil.asString(m.get("type"));
         if ("text".equals(type)) {
-            return new TextBlock(OpenaiJsonUtil.asString(m.get("text")));
+            return new TextBlock(JsonUtil.asString(m.get("text")));
         }
         if ("image_url".equals(type)) {
-            return decodeImagePart(OpenaiJsonUtil.asMap(m.get("image_url")));
+            return decodeImagePart(JsonUtil.asMap(m.get("image_url")));
         }
         // An unrecognized content-part type (e.g. "input_audio") -- stash it verbatim rather than
         // throw, mirroring AnthropicBlockCodec's UnknownBlock handling.
@@ -86,7 +87,7 @@ final class OpenaiBlockCodec {
     private static Block decodeImagePart(Map<String, Object> imageUrl) {
         ImageBlock img = new ImageBlock();
         if (imageUrl == null) return img;
-        String url = OpenaiJsonUtil.asString(imageUrl.get("url"));
+        String url = JsonUtil.asString(imageUrl.get("url"));
         DataUri dataUri = url == null ? null : DataUri.parse(url);
         if (dataUri != null) {
             img.mediaType = dataUri.mediaType;
@@ -129,7 +130,7 @@ final class OpenaiBlockCodec {
             imageUrl.put("url", img.url);
         }
         if (img.extensions != null) {
-            Map<String, Object> extra = OpenaiJsonUtil.asMap(img.extensions.get(EXT_IMAGE_URL_RAW));
+            Map<String, Object> extra = JsonUtil.asMap(img.extensions.get(EXT_IMAGE_URL_RAW));
             if (extra != null) imageUrl.putAll(extra);
         }
         Map<String, Object> m = new LinkedHashMap<>();
@@ -142,11 +143,11 @@ final class OpenaiBlockCodec {
 
     static ToolUseBlock decodeToolCall(JsonCodec json, Map<String, Object> tcMap) {
         ToolUseBlock t = new ToolUseBlock();
-        t.id = OpenaiJsonUtil.asString(tcMap.get("id"));
-        Map<String, Object> fn = OpenaiJsonUtil.asMap(tcMap.get("function"));
+        t.id = JsonUtil.asString(tcMap.get("id"));
+        Map<String, Object> fn = JsonUtil.asMap(tcMap.get("function"));
         if (fn != null) {
-            t.name = OpenaiJsonUtil.asString(fn.get("name"));
-            String args = OpenaiJsonUtil.asString(fn.get("arguments"));
+            t.name = JsonUtil.asString(fn.get("name"));
+            String args = JsonUtil.asString(fn.get("arguments"));
             t.input = args != null ? json.parse(args) : null;
         }
         return t;

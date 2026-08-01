@@ -9,6 +9,7 @@ import io.github.intisy.ai.ir.TextBlock;
 import io.github.intisy.ai.ir.ThinkingBlock;
 import io.github.intisy.ai.ir.ToolResultBlock;
 import io.github.intisy.ai.ir.ToolUseBlock;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 
 import java.util.ArrayList;
@@ -48,16 +49,16 @@ final class OpenaiRequestCodec {
             "role", "content", "tool_call_id"));
 
     static IrRequest decodeRequest(JsonCodec json, String wireJson) {
-        Map<String, Object> root = OpenaiJsonUtil.asMap(json.parse(wireJson));
+        Map<String, Object> root = JsonUtil.asMap(json.parse(wireJson));
         IrRequest r = new IrRequest();
         if (root == null) return r;
 
-        r.model = OpenaiJsonUtil.asString(root.get("model"));
-        r.maxTokens = OpenaiJsonUtil.asInt(root.get("max_tokens"));
-        r.temperature = OpenaiJsonUtil.asDouble(root.get("temperature"));
-        r.topP = OpenaiJsonUtil.asDouble(root.get("top_p"));
+        r.model = JsonUtil.asString(root.get("model"));
+        r.maxTokens = JsonUtil.asInt(root.get("max_tokens"));
+        r.temperature = JsonUtil.asDouble(root.get("temperature"));
+        r.topP = JsonUtil.asDouble(root.get("top_p"));
         decodeStop(root.get("stop"), r);
-        Boolean stream = OpenaiJsonUtil.asBoolean(root.get("stream"));
+        Boolean stream = JsonUtil.asBoolean(root.get("stream"));
         r.stream = stream != null && stream;
 
         decodeMessages(json, root.get("messages"), r);
@@ -90,14 +91,14 @@ final class OpenaiRequestCodec {
     // ---- messages ------------------------------------------------------------------------------
 
     private static void decodeMessages(JsonCodec json, Object raw, IrRequest r) {
-        List<Object> list = OpenaiJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return;
         List<Block> systemBlocks = null;
         List<IrMessage> messages = new ArrayList<>();
         for (Object item : list) {
-            Map<String, Object> mm = OpenaiJsonUtil.asMap(item);
+            Map<String, Object> mm = JsonUtil.asMap(item);
             if (mm == null) continue;
-            if ("system".equals(OpenaiJsonUtil.asString(mm.get("role")))) {
+            if ("system".equals(JsonUtil.asString(mm.get("role")))) {
                 ContentShape shape = decodeContentShape(mm.get("content"));
                 if (systemBlocks == null) systemBlocks = new ArrayList<>();
                 systemBlocks.addAll(shape.blocks);
@@ -112,11 +113,11 @@ final class OpenaiRequestCodec {
 
     private static IrMessage decodeMessage(JsonCodec json, Map<String, Object> mm) {
         IrMessage msg = new IrMessage();
-        msg.role = OpenaiJsonUtil.asString(mm.get("role"));
+        msg.role = JsonUtil.asString(mm.get("role"));
 
         if ("tool".equals(msg.role)) {
             ToolResultBlock result = new ToolResultBlock();
-            result.toolUseId = OpenaiJsonUtil.asString(mm.get("tool_call_id"));
+            result.toolUseId = JsonUtil.asString(mm.get("tool_call_id"));
             ContentShape shape = decodeContentShape(mm.get("content"));
             result.content = shape.blocks;
             if (shape.wasString) OpenaiBlockCodec.putExtension(result, OpenaiBlockCodec.EXT_CONTENT_IS_STRING, Boolean.TRUE);
@@ -128,7 +129,7 @@ final class OpenaiRequestCodec {
         }
 
         List<Block> content = new ArrayList<>();
-        String reasoning = OpenaiJsonUtil.asString(mm.get("reasoning_content"));
+        String reasoning = JsonUtil.asString(mm.get("reasoning_content"));
         if (reasoning != null) {
             ThinkingBlock thinking = new ThinkingBlock();
             thinking.text = reasoning;
@@ -138,10 +139,10 @@ final class OpenaiRequestCodec {
         ContentShape shape = decodeContentShape(mm.get("content"));
         content.addAll(shape.blocks);
 
-        List<Object> toolCalls = OpenaiJsonUtil.asList(mm.get("tool_calls"));
+        List<Object> toolCalls = JsonUtil.asList(mm.get("tool_calls"));
         if (toolCalls != null) {
             for (Object tc : toolCalls) {
-                Map<String, Object> tcMap = OpenaiJsonUtil.asMap(tc);
+                Map<String, Object> tcMap = JsonUtil.asMap(tc);
                 if (tcMap != null) content.add(OpenaiBlockCodec.decodeToolCall(json, tcMap));
             }
         }
@@ -260,20 +261,20 @@ final class OpenaiRequestCodec {
     // ---- tools -----------------------------------------------------------------------------------
 
     private static List<IrTool> decodeTools(Object raw) {
-        List<Object> list = OpenaiJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return null;
         List<IrTool> out = new ArrayList<>();
-        for (Object item : list) out.add(decodeTool(OpenaiJsonUtil.asMap(item)));
+        for (Object item : list) out.add(decodeTool(JsonUtil.asMap(item)));
         return out;
     }
 
     private static IrTool decodeTool(Map<String, Object> tm) {
         if (tm == null) return null;
         IrTool t = new IrTool();
-        Map<String, Object> fn = OpenaiJsonUtil.asMap(tm.get("function"));
+        Map<String, Object> fn = JsonUtil.asMap(tm.get("function"));
         if (fn != null) {
-            t.name = OpenaiJsonUtil.asString(fn.get("name"));
-            t.description = OpenaiJsonUtil.asString(fn.get("description"));
+            t.name = JsonUtil.asString(fn.get("name"));
+            t.description = JsonUtil.asString(fn.get("description"));
             t.inputSchema = fn.get("parameters");
             for (Map.Entry<String, Object> e : fn.entrySet()) {
                 String k = e.getKey();
@@ -328,12 +329,12 @@ final class OpenaiRequestCodec {
             else c.type = s;
             return c;
         }
-        Map<String, Object> tcMap = OpenaiJsonUtil.asMap(raw);
+        Map<String, Object> tcMap = JsonUtil.asMap(raw);
         if (tcMap == null) return null;
         c.type = IrToolChoice.Type.TOOL;
-        Map<String, Object> fn = OpenaiJsonUtil.asMap(tcMap.get("function"));
+        Map<String, Object> fn = JsonUtil.asMap(tcMap.get("function"));
         if (fn != null) {
-            c.name = OpenaiJsonUtil.asString(fn.get("name"));
+            c.name = JsonUtil.asString(fn.get("name"));
             for (Map.Entry<String, Object> e : fn.entrySet()) {
                 if (!"name".equals(e.getKey())) putToolChoiceExtension(c, e.getKey(), e.getValue());
             }
@@ -392,7 +393,7 @@ final class OpenaiRequestCodec {
     }
 
     private static List<String> decodeStringList(Object raw) {
-        List<Object> list = OpenaiJsonUtil.asList(raw);
+        List<Object> list = JsonUtil.asList(raw);
         if (list == null) return null;
         List<String> out = new ArrayList<>();
         for (Object item : list) out.add(String.valueOf(item));

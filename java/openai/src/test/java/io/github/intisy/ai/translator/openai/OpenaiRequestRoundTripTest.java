@@ -8,6 +8,7 @@ import io.github.intisy.ai.ir.TextBlock;
 import io.github.intisy.ai.ir.ThinkingBlock;
 import io.github.intisy.ai.ir.ToolResultBlock;
 import io.github.intisy.ai.ir.ToolUseBlock;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.json.TestJsonCodec;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 import org.junit.jupiter.api.Test;
@@ -221,10 +222,10 @@ class OpenaiRequestRoundTripTest {
         request.messages = Collections.singletonList(userMessage);
 
         String reEncoded = translator.encodeRequest(request);
-        Map<String, Object> root = OpenaiJsonUtil.asMap(json.parse(reEncoded));
-        List<Object> messages = OpenaiJsonUtil.asList(root.get("messages"));
-        Map<String, Object> encodedUserMessage = OpenaiJsonUtil.asMap(messages.get(0));
-        List<Object> content = OpenaiJsonUtil.asList(encodedUserMessage.get("content"));
+        Map<String, Object> root = JsonUtil.asMap(json.parse(reEncoded));
+        List<Object> messages = JsonUtil.asList(root.get("messages"));
+        Map<String, Object> encodedUserMessage = JsonUtil.asMap(messages.get(0));
+        List<Object> content = JsonUtil.asList(encodedUserMessage.get("content"));
 
         assertEquals(1, content.size(), "the off-spec ToolResultBlock must be omitted, not encoded as null");
         assertFalse(content.contains(null), "content array must never contain a literal null entry");

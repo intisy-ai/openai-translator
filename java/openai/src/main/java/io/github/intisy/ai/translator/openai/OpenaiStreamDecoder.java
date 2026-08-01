@@ -1,6 +1,7 @@
 package io.github.intisy.ai.translator.openai;
 
 import io.github.intisy.ai.ir.IrUsage;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 import io.github.intisy.ai.ir.spi.StreamDecoder;
 import io.github.intisy.ai.ir.stream.ContentBlockKind;
@@ -91,20 +92,20 @@ final class OpenaiStreamDecoder implements StreamDecoder {
             flushDone(out);
             return;
         }
-        Map<String, Object> frame = OpenaiJsonUtil.asMap(json.parse(data));
+        Map<String, Object> frame = JsonUtil.asMap(json.parse(data));
         if (frame != null) decodeFrame(frame, out);
     }
 
     private void decodeFrame(Map<String, Object> frame, List<IrStreamEvent> out) {
-        List<Object> choices = OpenaiJsonUtil.asList(frame.get("choices"));
+        List<Object> choices = JsonUtil.asList(frame.get("choices"));
         Map<String, Object> choice = choices != null && !choices.isEmpty()
-                ? OpenaiJsonUtil.asMap(choices.get(0)) : null;
-        Map<String, Object> delta = choice != null ? OpenaiJsonUtil.asMap(choice.get("delta")) : null;
+                ? JsonUtil.asMap(choices.get(0)) : null;
+        Map<String, Object> delta = choice != null ? JsonUtil.asMap(choice.get("delta")) : null;
 
         ensureMessageStart(frame, delta, out);
         if (delta != null) decodeDelta(delta, out);
 
-        String finishReason = choice != null ? OpenaiJsonUtil.asString(choice.get("finish_reason")) : null;
+        String finishReason = choice != null ? JsonUtil.asString(choice.get("finish_reason")) : null;
         if (finishReason != null) {
             closeOpenBlocks(out);
             pendingStopReason = OpenaiFinishReason.toIr(finishReason);
@@ -121,15 +122,15 @@ final class OpenaiStreamDecoder implements StreamDecoder {
         if (messageStarted) return;
         messageStarted = true;
         MessageStartEvent ev = new MessageStartEvent();
-        ev.id = OpenaiJsonUtil.asString(frame.get("id"));
-        ev.model = OpenaiJsonUtil.asString(frame.get("model"));
-        String role = delta != null ? OpenaiJsonUtil.asString(delta.get("role")) : null;
+        ev.id = JsonUtil.asString(frame.get("id"));
+        ev.model = JsonUtil.asString(frame.get("model"));
+        String role = delta != null ? JsonUtil.asString(delta.get("role")) : null;
         ev.role = role != null ? role : "assistant";
         out.add(ev);
     }
 
     private void decodeDelta(Map<String, Object> delta, List<IrStreamEvent> out) {
-        String content = OpenaiJsonUtil.asString(delta.get("content"));
+        String content = JsonUtil.asString(delta.get("content"));
         if (content != null) {
             if (textBlockIndex == null) {
                 textBlockIndex = nextBlockIndex++;
@@ -145,20 +146,20 @@ final class OpenaiStreamDecoder implements StreamDecoder {
             out.add(textDelta);
         }
 
-        List<Object> toolCalls = OpenaiJsonUtil.asList(delta.get("tool_calls"));
+        List<Object> toolCalls = JsonUtil.asList(delta.get("tool_calls"));
         if (toolCalls != null) {
             for (Object tc : toolCalls) {
-                Map<String, Object> tcMap = OpenaiJsonUtil.asMap(tc);
+                Map<String, Object> tcMap = JsonUtil.asMap(tc);
                 if (tcMap != null) decodeToolCallDelta(tcMap, out);
             }
         }
     }
 
     private void decodeToolCallDelta(Map<String, Object> tc, List<IrStreamEvent> out) {
-        Integer toolCallIndex = OpenaiJsonUtil.asInt(tc.get("index"));
+        Integer toolCallIndex = JsonUtil.asInt(tc.get("index"));
         int key = toolCallIndex == null ? 0 : toolCallIndex;
         Integer blockIndex = toolBlockIndexByToolCallIndex.get(key);
-        Map<String, Object> function = OpenaiJsonUtil.asMap(tc.get("function"));
+        Map<String, Object> function = JsonUtil.asMap(tc.get("function"));
         if (blockIndex == null) {
             blockIndex = nextBlockIndex++;
             toolBlockIndexByToolCallIndex.put(key, blockIndex);
@@ -166,11 +167,11 @@ final class OpenaiStreamDecoder implements StreamDecoder {
             ContentBlockStartEvent start = new ContentBlockStartEvent();
             start.index = blockIndex;
             start.blockKind = ContentBlockKind.TOOL_USE;
-            start.toolUseId = OpenaiJsonUtil.asString(tc.get("id"));
-            start.toolName = function != null ? OpenaiJsonUtil.asString(function.get("name")) : null;
+            start.toolUseId = JsonUtil.asString(tc.get("id"));
+            start.toolName = function != null ? JsonUtil.asString(function.get("name")) : null;
             out.add(start);
         }
-        String argumentsFragment = function != null ? OpenaiJsonUtil.asString(function.get("arguments")) : null;
+        String argumentsFragment = function != null ? JsonUtil.asString(function.get("arguments")) : null;
         if (argumentsFragment != null) {
             ToolInputDeltaEvent delta = new ToolInputDeltaEvent();
             delta.index = blockIndex;

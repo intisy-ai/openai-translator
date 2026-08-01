@@ -4,6 +4,7 @@ import io.github.intisy.ai.ir.Block;
 import io.github.intisy.ai.ir.IrResponse;
 import io.github.intisy.ai.ir.TextBlock;
 import io.github.intisy.ai.ir.ToolUseBlock;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 
 import java.util.ArrayList;
@@ -43,17 +44,17 @@ final class OpenaiResponseCodec {
             "role", "content", "tool_calls"));
 
     static IrResponse decodeResponse(JsonCodec json, String wireJson) {
-        Map<String, Object> root = OpenaiJsonUtil.asMap(json.parse(wireJson));
+        Map<String, Object> root = JsonUtil.asMap(json.parse(wireJson));
         IrResponse r = new IrResponse();
         if (root == null) return r;
 
-        r.id = OpenaiJsonUtil.asString(root.get("id"));
-        r.model = OpenaiJsonUtil.asString(root.get("model"));
+        r.id = JsonUtil.asString(root.get("id"));
+        r.model = JsonUtil.asString(root.get("model"));
         r.usage = OpenaiUsageCodec.decode(root.get("usage"));
 
-        List<Object> choices = OpenaiJsonUtil.asList(root.get("choices"));
+        List<Object> choices = JsonUtil.asList(root.get("choices"));
         Map<String, Object> firstChoice = choices != null && !choices.isEmpty()
-                ? OpenaiJsonUtil.asMap(choices.get(0)) : null;
+                ? JsonUtil.asMap(choices.get(0)) : null;
         if (firstChoice != null) decodeChoice(json, firstChoice, r);
         if (choices != null && choices.size() > 1) {
             putExtension(r, EXT_EXTRA_CHOICES_RAW, new ArrayList<>(choices.subList(1, choices.size())));
@@ -69,11 +70,11 @@ final class OpenaiResponseCodec {
 
     private static void decodeChoice(JsonCodec json, Map<String, Object> choice, IrResponse r) {
         putExtension(r, EXT_CHOICE_INDEX_RAW, choice.get("index"));
-        String finishReasonRaw = OpenaiJsonUtil.asString(choice.get("finish_reason"));
+        String finishReasonRaw = JsonUtil.asString(choice.get("finish_reason"));
         r.stopReason = OpenaiFinishReason.toIr(finishReasonRaw);
         putExtension(r, EXT_FINISH_REASON_RAW, finishReasonRaw);
 
-        Map<String, Object> message = OpenaiJsonUtil.asMap(choice.get("message"));
+        Map<String, Object> message = JsonUtil.asMap(choice.get("message"));
         r.content = message != null ? decodeMessage(json, message, r) : new ArrayList<Block>();
 
         Map<String, Object> choiceExtra = leftovers(choice, CHOICE_KNOWN_KEYS);
@@ -93,10 +94,10 @@ final class OpenaiResponseCodec {
             if (decoded != null) content.addAll(decoded);
         }
 
-        List<Object> toolCalls = OpenaiJsonUtil.asList(message.get("tool_calls"));
+        List<Object> toolCalls = JsonUtil.asList(message.get("tool_calls"));
         if (toolCalls != null) {
             for (Object tc : toolCalls) {
-                Map<String, Object> tcMap = OpenaiJsonUtil.asMap(tc);
+                Map<String, Object> tcMap = JsonUtil.asMap(tc);
                 if (tcMap != null) content.add(OpenaiBlockCodec.decodeToolCall(json, tcMap));
             }
         }
@@ -119,7 +120,7 @@ final class OpenaiResponseCodec {
     private static List<Object> encodeChoices(JsonCodec json, IrResponse r) {
         List<Object> out = new ArrayList<>();
         out.add(encodeFirstChoice(json, r));
-        List<Object> extraChoices = OpenaiJsonUtil.asList(extension(r, EXT_EXTRA_CHOICES_RAW));
+        List<Object> extraChoices = JsonUtil.asList(extension(r, EXT_EXTRA_CHOICES_RAW));
         if (extraChoices != null) out.addAll(extraChoices);
         return out;
     }
@@ -131,7 +132,7 @@ final class OpenaiResponseCodec {
         Object finishReasonRaw = extension(r, EXT_FINISH_REASON_RAW);
         choice.put("finish_reason", finishReasonRaw != null ? finishReasonRaw : OpenaiFinishReason.toOpenai(r.stopReason));
         choice.put("message", encodeMessage(json, r));
-        Map<String, Object> choiceExtra = OpenaiJsonUtil.asMap(extension(r, EXT_CHOICE_EXTRA_RAW));
+        Map<String, Object> choiceExtra = JsonUtil.asMap(extension(r, EXT_CHOICE_EXTRA_RAW));
         if (choiceExtra != null) choice.putAll(choiceExtra);
         return choice;
     }
@@ -165,7 +166,7 @@ final class OpenaiResponseCodec {
             message.put("tool_calls", OpenaiBlockCodec.encodeToolCalls(json, toolUses));
         }
 
-        Map<String, Object> messageExtra = OpenaiJsonUtil.asMap(extension(r, EXT_MESSAGE_EXTRA_RAW));
+        Map<String, Object> messageExtra = JsonUtil.asMap(extension(r, EXT_MESSAGE_EXTRA_RAW));
         if (messageExtra != null) message.putAll(messageExtra);
         return message;
     }

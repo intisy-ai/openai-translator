@@ -4,6 +4,7 @@ import io.github.intisy.ai.ir.IrResponse;
 import io.github.intisy.ai.ir.IrStopReason;
 import io.github.intisy.ai.ir.TextBlock;
 import io.github.intisy.ai.ir.ToolUseBlock;
+import io.github.intisy.ai.ir.json.JsonUtil;
 import io.github.intisy.ai.ir.json.TestJsonCodec;
 import io.github.intisy.ai.ir.spi.JsonCodec;
 import org.junit.jupiter.api.Test;
@@ -84,8 +85,8 @@ class OpenaiResponseRoundTripTest {
         String reEncoded = translator.encodeResponse(decoded);
         Object reparsed = json.parse(reEncoded);
         assertTrue(reparsed instanceof Map);
-        Map<String, Object> root = OpenaiJsonUtil.asMap(reparsed);
-        Map<String, Object> firstChoice = OpenaiJsonUtil.asMap(OpenaiJsonUtil.asList(root.get("choices")).get(0));
+        Map<String, Object> root = JsonUtil.asMap(reparsed);
+        Map<String, Object> firstChoice = JsonUtil.asMap(JsonUtil.asList(root.get("choices")).get(0));
         assertEquals("content_filter", firstChoice.get("finish_reason"),
                 "the exact OpenAI finish_reason string must survive even though IR has no matching constant");
         assertEquals(json.parse(wire), reparsed);

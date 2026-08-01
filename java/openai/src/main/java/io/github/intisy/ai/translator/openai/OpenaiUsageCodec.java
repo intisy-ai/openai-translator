@@ -1,6 +1,7 @@
 package io.github.intisy.ai.translator.openai;
 
 import io.github.intisy.ai.ir.IrUsage;
+import io.github.intisy.ai.ir.json.JsonUtil;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -15,12 +16,12 @@ final class OpenaiUsageCodec {
     }
 
     static IrUsage decode(Object raw) {
-        Map<String, Object> m = OpenaiJsonUtil.asMap(raw);
+        Map<String, Object> m = JsonUtil.asMap(raw);
         if (m == null) return null;
         IrUsage u = new IrUsage();
-        u.inputTokens = OpenaiJsonUtil.asInt(m.get("prompt_tokens"));
-        u.outputTokens = OpenaiJsonUtil.asInt(m.get("completion_tokens"));
-        u.totalTokens = OpenaiJsonUtil.asInt(m.get("total_tokens"));
+        u.inputTokens = JsonUtil.asInt(m.get("prompt_tokens"));
+        u.outputTokens = JsonUtil.asInt(m.get("completion_tokens"));
+        u.totalTokens = JsonUtil.asInt(m.get("total_tokens"));
         return u;
     }
 
