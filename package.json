@@ -1,15 +1,31 @@
 {
   "name": "openai-translator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenAI vendor translator for the canonical IR (internal representation), Java + TeaVM single-source, nesting core-ir",
   "type": "module",
   "main": "dist/index.js",
   "license": "MIT",
   "author": "intisy",
-  "repository": { "type": "git", "url": "git+https://github.com/intisy-ai/openai-translator.git" },
-  "keywords": ["ir", "canonical-ir", "openai", "ai", "intisy", "openai-translator"],
-  "files": ["dist/", "README.md", "LICENSE"],
-  "engines": { "node": ">=20.0.0" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/intisy-ai/openai-translator.git"
+  },
+  "keywords": [
+    "ir",
+    "canonical-ir",
+    "openai",
+    "ai",
+    "intisy",
+    "openai-translator"
+  ],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "build:coreir": "npm --prefix core-ir install && npm --prefix core-ir run build",
     "build:teavm": "node teavm-build.mjs --java-dir java --module :teavm-openai --out src/generated/openai-translator.teavm.js",
@@ -17,5 +33,10 @@
     "test": "vitest run",
     "prepublishOnly": "npm run build"
   },
-  "devDependencies": { "typescript": "^5.6.0", "vitest": "^2.1.0", "@types/node": "^22.0.0", "esbuild": "^0.21.5" }
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
 }
