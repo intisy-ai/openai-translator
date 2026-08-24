@@ -1,6 +1,6 @@
 {
   "name": "openai-translator",
-  "version": "0.1.1",
+  "version": "1.0.0",
   "description": "OpenAI vendor translator for the canonical IR (internal representation), Java + TeaVM single-source, nesting core-ir",
   "type": "module",
   "main": "dist/index.js",
@@ -28,7 +28,7 @@
   },
   "scripts": {
     "build:coreir": "npm --prefix core-ir install && npm --prefix core-ir run build",
-    "build:teavm": "node teavm-build.mjs --java-dir java --module :teavm-openai --out src/generated/openai-translator.teavm.js",
+    "build:teavm": "node teavm-build.mjs --java-dir . --module :teavm-openai --out src/generated/openai-translator.teavm.js",
     "build": "npm run build:coreir && npm run build:teavm && tsc && node build.mjs",
     "test": "vitest run",
     "prepublishOnly": "npm run build"
