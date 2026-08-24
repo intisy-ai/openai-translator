@@ -1,6 +1,6 @@
 {
   "name": "openai-translator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "OpenAI vendor translator for the canonical IR (internal representation), Java + TeaVM single-source, nesting core-ir",
   "type": "module",
   "main": "dist/index.js",
