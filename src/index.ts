@@ -8,4 +8,4 @@ export function loadOpenaiTranslator(): Promise<typeof import("./generated/opena
 }
 
 export * from "./translators.js";
-export * from "../core-ir/dist/index.js";
+export * from "@intisy-ai/core-ir";

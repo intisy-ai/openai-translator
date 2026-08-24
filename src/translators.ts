@@ -1,5 +1,5 @@
 import { loadOpenaiTranslator } from "./index.js";
-import { makeVendorTranslator } from "../core-ir/dist/index.js";
+import { makeVendorTranslator } from "@intisy-ai/core-ir";
 
 export const openaiTranslator = makeVendorTranslator(loadOpenaiTranslator, {
   decodeRequest: (m) => m.openaiDecodeRequest,
