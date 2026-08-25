@@ -1,5 +1,3 @@
-# openai-translator
-
 OpenAI Chat Completions vendor translator for the canonical IR (internal representation) used
 across the intisy AI-tooling ecosystem. Java + TeaVM single-source, so the exact same request,
 response, and streaming codecs compile to a JVM jar and to a JS module: any front-door or provider
@@ -104,7 +102,3 @@ esbuild; `test` round-trips the translator from TS, including a full streamed re
 `TransformStream` helpers). Both layers use the same round-trip fixture approach: a captured OpenAI
 wire payload decoded to IR and re-encoded, asserting the result matches the original shape rather
 than a byte-identical string.
-
-## License
-
-MIT

@@ -1,0 +1,6 @@
+kind: generic
+description: OpenAI wire-format translator for the intisy-ai AI-proxy ecosystem.
+badges:
+  - npm-version
+  - npm-downloads
+  - build
