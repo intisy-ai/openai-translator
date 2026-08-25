@@ -1,7 +1,7 @@
 {
   "name": "openai-translator",
-  "version": "1.1.0",
-  "description": "OpenAI vendor translator for the canonical IR (internal representation), Java + TeaVM single-source, nesting core-ir",
+  "version": "1.1.1",
+  "description": "OpenAI wire-format translator for the intisy-ai AI-proxy ecosystem.",
   "type": "module",
   "main": "dist/index.js",
   "license": "MIT",
