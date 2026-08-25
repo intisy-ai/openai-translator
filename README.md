@@ -17,8 +17,8 @@ flowchart LR
   RESP --> TR
   SSE --> TR
   IR[core-ir: IrRequest / IrResponse / IrStreamEvent] --> TR
-  TR -->|":openai" module| OPENAI[java/openai]
-  OPENAI -->|TeaVM generateJavaScript| GEN[java/teavm-openai build/generated/teavm/js]
+  TR -->|":openai" module| OPENAI[openai]
+  OPENAI -->|TeaVM generateJavaScript| GEN[teavm-openai build/generated/teavm/js]
   GEN -->|teavm-build.mjs stage| STAGED[src/generated/openai-translator.teavm.js]
   STAGED -->|tsc + esbuild| DIST[dist/index.js]
   DIST --> API["src/translators.ts: openaiTranslator"]
@@ -27,7 +27,7 @@ flowchart LR
 `OpenaiTranslator` implements `core-ir`'s `Translator` SPI: `decodeRequest`/`encodeRequest`,
 `decodeResponse`/`encodeResponse`, and stateful `newStreamDecoder()`/`newStreamEncoder()` for true
 streaming (no buffer-and-reconvert). The `:openai` module holds the codecs and is zero-dependency,
-Java-8-clean; `:teavm-openai` is the TeaVM export surface over `:openai` and the nested `:ir`
+Java-8-clean; `:teavm-openai` is the TeaVM export surface over `:openai` and core-ir's `:ir`
 module, transpiled to a single JS bundle. The TS surface (`openaiTranslator`) is a thin async
 wrapper over that generated JS, so callers never touch the TeaVM handle directly.
 
@@ -45,29 +45,32 @@ wrapper over that generated JS, so callers never touch the TeaVM handle directly
   `.js` itself is gitignored build output).
 - `src/__tests__/` - `smoke.test.ts` (toolchain round trip) and `translators.test.ts` (request,
   response, and streamed-response round trips through the `TransformStream` helpers).
-- `java/openai/` - the OpenAI codecs (`OpenaiRequestCodec`, `OpenaiResponseCodec`,
+- `openai/` - the OpenAI codecs (`OpenaiRequestCodec`, `OpenaiResponseCodec`,
   `OpenaiStreamDecoder`, `OpenaiStreamEncoder`, `OpenaiBlockCodec`, `OpenaiUsageCodec`,
   `OpenaiFinishReason`) plus `OpenaiTranslator`, the `Translator` implementation that ties them
-  together. Depends on the nested `core-ir`'s `:ir` module for the IR types and the codec SPI.
-- `java/teavm-openai/` - the TeaVM JS export surface (`OpenaiTranslatorJs`), transpiling `:openai`
+  together. Depends on core-ir's `:ir` module for the IR types and the codec SPI.
+- `teavm-openai/` - the TeaVM JS export surface (`OpenaiTranslatorJs`), transpiling `:openai`
   and `:ir` to `openai-translator.js`.
-- `java/settings.gradle` / `java/build.gradle` / `java/gradlew*` - self-contained Gradle build
-  (Java 8 for `:openai`, Java 17 override for `:teavm-openai`), re-declaring the nested `:ir`
-  module's project path (Gradle settings do not nest across submodules).
+- `settings.gradle` / `build.gradle` / `gradlew*` - self-contained Gradle build
+  (Java 8 for `:openai`, Java 17 override for `:teavm-openai`), declaring core-ir's `:ir`
+  module as a github-gradle coordinate.
 
 ## Installation
 
-Via git submodule (the ecosystem convention for a `*-translator` repo consumed by a plugin):
+TypeScript, as a published npm package:
 
 ```bash
-git submodule add https://github.com/intisy-ai/openai-translator.git openai-translator
-git submodule update --init --recursive
+npm install @intisy-ai/openai-translator
 ```
 
-`openai-translator` itself nests `core-ir` as a submodule, so a recursive submodule update is
-required (`--init --recursive`, or `git submodule update --init --recursive` from the consuming
-repo's root) to pull both levels before building. It is a submodule-consumed library like
-`core-ir`/`core-proxy`, not an npm package, so there is no `npm install` step.
+Java, as a `github-gradle` coordinate resolving this repo's released `:openai` jar:
+
+```groovy
+githubImplementation "intisy-ai:openai-translator:1.1.0:openai"
+```
+
+No checkout of this repo or of `core-ir` is needed, or wanted: a nested checkout is a third
+resolver beside the package manifest and the build file, and it can disagree with both.
 
 ## Usage
 
