@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/@intisy-ai/api/schema/plugin.schema.json",
+  "id": "openai-translator",
+  "api": 1,
+  "publish": {
+    "jarModule": [
+      "openai"
+    ]
+  },
+  "repo": {
+    "role": "OpenAI wire-format translator",
+    "category": "vendor-translator",
+    "domains": [
+      "openai"
+    ],
+    "tech": [
+      "java",
+      "teavm"
+    ]
+  }
+}
