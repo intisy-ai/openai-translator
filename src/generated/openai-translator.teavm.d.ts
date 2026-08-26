@@ -1,29 +1,54 @@
-// Hand-authored ambient types for the TeaVM-generated ES module staged into this same directory
-// by `npm run build:teavm` (teavm-build.mjs), from java/teavm-openai's OpenaiTranslatorJs
-// @JSExport surface. The generated openai-translator.teavm.js itself is gitignored (build
-// output); this .d.ts is committed source so tsc can type-check consumers of
-// `loadOpenaiTranslator()` without needing the build to have run first.
+// Generated from Java sources. Do not edit.
 
-// Bare round-trip smoke export proving the pipeline is wired end to end.
-export function jsonRoundTrip(json: string): string;
-
-// Non-streaming translator exports: OpenAI wireJson <-> core-ir's own IrRequest/IrResponse
-// JSON shape (the same shape IrJson.serialize*/parse* produce -- see core-ir's src/types.ts).
-export function openaiDecodeRequest(wireJson: string): string;
-export function openaiEncodeRequest(irRequestJson: string): string;
-export function openaiDecodeResponse(wireJson: string): string;
-export function openaiEncodeResponse(irResponseJson: string): string;
-
-// Streaming translator exports: stateful per-connection handles. `decode` takes one raw
-// vendor chunk (partial lines/frames are buffered internally, across calls) and returns a JSON
-// array of IR stream-event objects completed by that chunk (often empty). `encode` takes one IR
-// stream-event's JSON and returns the vendor's wire text for it (an SSE frame, or "" when that
-// event has no wire representation for this vendor).
+/**
+ * A stateful handle over one stream decode, as a TypeScript consumer sees it.
+ *
+ * @remarks
+ * Never implemented, only emitted. The Java handle it describes speaks
+ * `JSString` and extends `JSObject`, neither of which means anything to a TypeScript
+ * caller, which is why this shape is declared apart from it rather than annotated onto it.
+ */
 export interface JsStreamDecoderHandle {
+  /**
+   * Feeds one raw vendor chunk and returns the IR stream events it completed, as a JSON array.
+   *
+   * @remarks
+   * Partial lines and frames are buffered inside the handle across calls, so a chunk
+   * completing nothing correctly returns an empty array.
+   */
   decode(chunk: string): string;
 }
+
+/**
+ * A stateful handle over one stream encode, as a TypeScript consumer sees it.
+ *
+ * @remarks
+ * Never implemented, only emitted, for the same reason as
+ * {@link JsStreamDecoderHandle}.
+ */
 export interface JsStreamEncoderHandle {
+  /**
+   * Encodes one IR stream event to this vendor's wire text.
+   *
+   * @remarks
+   * An event with no wire representation for this vendor encodes to the empty string
+   * rather than being reported as an error.
+   */
   encode(irEventJson: string): string;
 }
-export function openaiNewStreamDecoder(): JsStreamDecoderHandle;
-export function openaiNewStreamEncoder(): JsStreamEncoderHandle;
+
+/** Parse and stringify with no IR type involved, proving the JSON codec crosses TeaVM. */
+export declare function jsonRoundTrip(json: string): string;
+/** OpenAI wire JSON to an IR request. */
+export declare function openaiDecodeRequest(wireJson: string): string;
+/** OpenAI wire JSON to an IR response. */
+export declare function openaiDecodeResponse(wireJson: string): string;
+/** An IR request to OpenAI wire JSON. */
+export declare function openaiEncodeRequest(irRequestJson: string): string;
+/** An IR response to OpenAI wire JSON. */
+export declare function openaiEncodeResponse(irResponseJson: string): string;
+/** Opens a decode handle for one connection's stream. */
+export declare function openaiNewStreamDecoder(): JsStreamDecoderHandle;
+/** Opens an encode handle for one connection's stream. */
+export declare function openaiNewStreamEncoder(): JsStreamEncoderHandle;
+
