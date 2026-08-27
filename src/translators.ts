@@ -1,6 +1,13 @@
 import { loadOpenaiTranslator } from "./index.js";
 import { makeVendorTranslator } from "@intisy-ai/core-ir";
 
+/**
+ * The OpenAI translator, as every consumer takes it.
+ *
+ * @remarks
+ * Built by core-ir's `makeVendorTranslator`, so it loads the TeaVM module lazily on first use and
+ * carries the synchronous handles the Java routing engine reaches it through.
+ */
 export const openaiTranslator = makeVendorTranslator(loadOpenaiTranslator, {
   decodeRequest: (m) => m.openaiDecodeRequest,
   encodeRequest: (m) => m.openaiEncodeRequest,
