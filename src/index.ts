@@ -16,4 +16,4 @@ export function loadOpenaiTranslator(): Promise<typeof import("./generated/opena
 }
 
 export * from "./translators.js";
-export * from "@intisy-ai/core-ir";
+export * from "@intisy-ai/basekit/ir";
